@@ -4,8 +4,8 @@ import { LayoutGrid, PlusCircle, LogOut, Bell, Settings, UserCircle } from 'luci
 import PatientForm from './components/PatientForm';
 import Dashboard from './components/Dashboard';
 import Auth from './components/Auth';
-import { Patient } from '../types';
-import { loadPatients, savePatients } from './services/storage';
+import { Patient } from './types';
+import { getPatients, addPatient, updatePatient, deletePatient } from './services/patientService';
 import { supabase } from './services/supabase';
 import { Session } from '@supabase/supabase-js';
 
@@ -14,6 +14,7 @@ const App: React.FC = () => {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -31,34 +32,42 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (session) {
-      setPatients(loadPatients());
+      loadInitialData();
     }
   }, [session]);
 
-  const handleAddPatient = (data: Omit<Patient, 'id' | 'createdAt'>, id?: string) => {
-    let updated: Patient[];
-
-    if (id) {
-      // Edit existing
-      updated = patients.map(p =>
-        p.id === id
-          ? { ...p, ...data }
-          : p
-      );
-    } else {
-      // Add new
-      const newPatient: Patient = {
-        ...data,
-        id: Math.random().toString(36).substr(2, 9),
-        createdAt: new Date().toISOString(),
-      };
-      updated = [...patients, newPatient];
+  const loadInitialData = async () => {
+    setLoading(true);
+    try {
+      const data = await getPatients();
+      setPatients(data);
+    } catch (err) {
+      console.error('Failed to load patients', err);
+    } finally {
+      setLoading(false);
     }
+  };
 
-    setPatients(updated);
-    savePatients(updated);
-    setEditingPatient(null);
-    setView('dashboard');
+  const handleAddPatient = async (data: Omit<Patient, 'id' | 'createdAt'>, id?: string) => {
+    setLoading(true);
+    try {
+      if (id) {
+        // Edit existing
+        const updatedPatient = await updatePatient(id, data);
+        setPatients(prev => prev.map(p => p.id === id ? updatedPatient : p));
+      } else {
+        // Add new
+        const newPatient = await addPatient(data);
+        setPatients(prev => [newPatient, ...prev]);
+      }
+      setEditingPatient(null);
+      setView('dashboard');
+    } catch (err) {
+      console.error('Error saving patient', err);
+      alert('Erro ao salvar paciente. Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleEditInitiate = (patient: Patient) => {
@@ -66,10 +75,15 @@ const App: React.FC = () => {
     setView('form');
   };
 
-  const handleDeletePatient = (id: string) => {
-    const updated = patients.filter(p => p.id !== id);
-    setPatients(updated);
-    savePatients(updated);
+  const handleDeletePatient = async (id: string) => {
+    if (!confirm('Tem certeza que deseja excluir este paciente?')) return;
+    try {
+      await deletePatient(id);
+      setPatients(prev => prev.filter(p => p.id !== id));
+    } catch (err) {
+      console.error('Error deleting patient', err);
+      alert('Erro ao excluir paciente.');
+    }
   };
 
   const handleCancelForm = () => {
