@@ -39,8 +39,7 @@ const Dashboard: React.FC<DashboardProps> = ({ patients, onEdit, onDelete }) => 
       const term = searchTerm.toLowerCase();
       result = result.filter(p =>
         p.name.toLowerCase().includes(term) ||
-        p.classification.toLowerCase().includes(term) ||
-        p.procedures.some(proc => proc.toLowerCase().includes(term))
+        p.classification.toLowerCase().includes(term)
       );
     }
 
@@ -74,11 +73,15 @@ const Dashboard: React.FC<DashboardProps> = ({ patients, onEdit, onDelete }) => 
     const counts: Record<string, number> = {};
     filteredPatients.forEach(p => {
       p.procedures.forEach(proc => {
-        counts[proc] = (counts[proc] || 0) + 1;
+        const trimmedProc = proc.trim();
+        // Se houver filtro de procedimentos, conta apenas os que estão no filtro
+        if (filterProcedures.length === 0 || filterProcedures.includes(trimmedProc)) {
+          counts[trimmedProc] = (counts[trimmedProc] || 0) + 1;
+        }
       });
     });
     return counts;
-  }, [filteredPatients]);
+  }, [filteredPatients, filterProcedures]);
 
   const classificationData = useMemo(() => CLASSIFICATIONS.map(cls => ({
     name: cls,
