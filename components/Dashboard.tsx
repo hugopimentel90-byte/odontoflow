@@ -48,8 +48,10 @@ const Dashboard: React.FC<DashboardProps> = ({ patients, onEdit, onDelete }) => 
     }
 
     if (filterProcedures.length > 0) {
+      // Lógica de Correspondência Exata: Mostra apenas se o paciente fez TODOS e APENAS os procedimentos selecionados
       result = result.filter(p =>
-        p.procedures.some(proc => filterProcedures.includes(proc.trim()))
+        p.procedures.length === filterProcedures.length &&
+        p.procedures.every(proc => filterProcedures.includes(proc.trim()))
       );
     }
 
