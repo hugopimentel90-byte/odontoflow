@@ -1,8 +1,8 @@
 
 import React, { useState, useMemo } from 'react';
-import { 
-  PieChart, Pie, Cell, ResponsiveContainer, Tooltip, 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend 
+import {
+  PieChart, Pie, Cell, ResponsiveContainer, Tooltip,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend
 } from 'recharts';
 import { Users, User, ClipboardCheck, TrendingUp, Calendar, Search, Filter, X, ChevronDown, Edit2, Trash2, Info, FileText, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { Patient, Classification } from '../types';
@@ -19,12 +19,12 @@ const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444'];
 const Dashboard: React.FC<DashboardProps> = ({ patients, onEdit, onDelete }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterClass, setFilterClass] = useState<Classification | ''>('');
-  const [filterProcedure, setFilterProcedure] = useState<string>('');
+  const [filterProcedures, setFilterProcedures] = useState<string[]>([]);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
-  
+
   // State for the advanced deletion confirmation
   const [patientToDelete, setPatientToDelete] = useState<Patient | null>(null);
   const [confirmName, setConfirmName] = useState('');
@@ -35,8 +35,8 @@ const Dashboard: React.FC<DashboardProps> = ({ patients, onEdit, onDelete }) => 
 
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      result = result.filter(p => 
-        p.name.toLowerCase().includes(term) || 
+      result = result.filter(p =>
+        p.name.toLowerCase().includes(term) ||
         p.classification.toLowerCase().includes(term) ||
         p.procedures.some(proc => proc.toLowerCase().includes(term))
       );
@@ -46,8 +46,8 @@ const Dashboard: React.FC<DashboardProps> = ({ patients, onEdit, onDelete }) => 
       result = result.filter(p => p.classification === filterClass);
     }
 
-    if (filterProcedure) {
-      result = result.filter(p => p.procedures.includes(filterProcedure));
+    if (filterProcedures.length > 0) {
+      result = result.filter(p => p.procedures.some(proc => filterProcedures.includes(proc)));
     }
 
     if (startDate) {
@@ -63,7 +63,7 @@ const Dashboard: React.FC<DashboardProps> = ({ patients, onEdit, onDelete }) => 
     }
 
     return result;
-  }, [patients, searchTerm, filterClass, filterProcedure, startDate, endDate]);
+  }, [patients, searchTerm, filterClass, filterProcedures, startDate, endDate]);
 
   // Statistics
   const procedureCounts = useMemo(() => {
@@ -96,12 +96,12 @@ const Dashboard: React.FC<DashboardProps> = ({ patients, onEdit, onDelete }) => 
   const resetFilters = () => {
     setSearchTerm('');
     setFilterClass('');
-    setFilterProcedure('');
+    setFilterProcedures([]);
     setStartDate('');
     setEndDate('');
   };
 
-  const isFiltered = searchTerm || filterClass || filterProcedure || startDate || endDate;
+  const isFiltered = searchTerm || filterClass || filterProcedures.length > 0 || startDate || endDate;
 
   const handleConfirmDelete = () => {
     if (patientToDelete && confirmName === patientToDelete.name) {
@@ -130,11 +130,10 @@ const Dashboard: React.FC<DashboardProps> = ({ patients, onEdit, onDelete }) => 
         <div className="flex gap-2 w-full md:w-auto">
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
-              showFilters || isFiltered 
-                ? 'bg-blue-600 text-white shadow-md' 
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${showFilters || isFiltered
+              ? 'bg-blue-600 text-white shadow-md'
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
           >
             <Filter className="w-4 h-4" />
             Filtros
@@ -170,17 +169,24 @@ const Dashboard: React.FC<DashboardProps> = ({ patients, onEdit, onDelete }) => 
             </div>
           </div>
           <div>
-            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Procedimento</label>
-            <div className="relative">
-              <select
-                value={filterProcedure}
-                onChange={(e) => setFilterProcedure(e.target.value)}
-                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 text-sm appearance-none focus:ring-4 focus:ring-blue-100 outline-none pr-10 truncate"
-              >
-                <option value="">Todos os procedimentos</option>
-                {PROCEDURES.map(p => <option key={p} value={p}>{p}</option>)}
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Procedimentos</label>
+            <div className="flex flex-wrap gap-2 p-2 bg-gray-50 border border-gray-200 rounded-xl max-h-[120px] overflow-y-auto">
+              {PROCEDURES.map(p => (
+                <button
+                  key={p}
+                  onClick={() => {
+                    setFilterProcedures(prev =>
+                      prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]
+                    );
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border ${filterProcedures.includes(p)
+                    ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                    : 'bg-white text-gray-600 border-gray-200 hover:border-blue-300'
+                    }`}
+                >
+                  {p}
+                </button>
+              ))}
             </div>
           </div>
           <div>
@@ -237,10 +243,10 @@ const Dashboard: React.FC<DashboardProps> = ({ patients, onEdit, onDelete }) => 
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip 
+                  <Tooltip
                     contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
                   />
-                  <Legend verticalAlign="bottom" height={36}/>
+                  <Legend verticalAlign="bottom" height={36} />
                 </PieChart>
               </ResponsiveContainer>
             ) : (
@@ -260,7 +266,7 @@ const Dashboard: React.FC<DashboardProps> = ({ patients, onEdit, onDelete }) => 
                   <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
                   <XAxis type="number" hide />
                   <YAxis dataKey="name" type="category" width={100} fontSize={10} tick={{ fill: '#94a3b8' }} />
-                  <Tooltip 
+                  <Tooltip
                     cursor={{ fill: '#f8fafc' }}
                     contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
                   />
@@ -283,7 +289,7 @@ const Dashboard: React.FC<DashboardProps> = ({ patients, onEdit, onDelete }) => 
             <p className="text-sm text-gray-500 mt-1">Clique no nome para ver detalhes e notas.</p>
           </div>
         </div>
-        
+
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
@@ -299,7 +305,7 @@ const Dashboard: React.FC<DashboardProps> = ({ patients, onEdit, onDelete }) => 
               {filteredPatients.slice().reverse().map((p) => (
                 <tr key={p.id} className="hover:bg-blue-50/30 transition-colors group">
                   <td className="px-8 py-4 text-sm font-semibold text-gray-900">
-                    <button 
+                    <button
                       onClick={() => setSelectedPatient(p)}
                       className="hover:text-blue-600 hover:underline flex items-center gap-2 text-left"
                     >
@@ -370,14 +376,14 @@ const Dashboard: React.FC<DashboardProps> = ({ patients, onEdit, onDelete }) => 
                   <p className="text-blue-100 text-xs">Registrado em {new Date(selectedPatient.createdAt).toLocaleDateString('pt-BR')}</p>
                 </div>
               </div>
-              <button 
+              <button
                 onClick={() => setSelectedPatient(null)}
                 className="p-2 hover:bg-white/10 rounded-full transition-colors"
               >
                 <X className="w-6 h-6" />
               </button>
             </div>
-            
+
             <div className="p-8 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
@@ -415,13 +421,13 @@ const Dashboard: React.FC<DashboardProps> = ({ patients, onEdit, onDelete }) => 
             </div>
 
             <div className="p-6 bg-slate-50 border-t border-slate-100 flex gap-3">
-              <button 
+              <button
                 onClick={() => { onEdit(selectedPatient); setSelectedPatient(null); }}
                 className="flex-1 bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
               >
                 <Edit2 className="w-4 h-4" /> Editar Cadastro
               </button>
-              <button 
+              <button
                 onClick={() => setSelectedPatient(null)}
                 className="px-6 py-3 bg-white border border-slate-200 text-slate-600 font-bold rounded-xl hover:bg-slate-50 transition-colors"
               >
@@ -440,7 +446,7 @@ const Dashboard: React.FC<DashboardProps> = ({ patients, onEdit, onDelete }) => 
               <div className="w-20 h-20 bg-red-100 rounded-3xl flex items-center justify-center mx-auto text-red-600">
                 <AlertTriangle className="w-10 h-10" />
               </div>
-              
+
               <div className="space-y-2">
                 <h3 className="text-2xl font-bold text-gray-900">Confirmar Exclusão</h3>
                 <p className="text-gray-500 text-sm">
@@ -452,7 +458,7 @@ const Dashboard: React.FC<DashboardProps> = ({ patients, onEdit, onDelete }) => 
                 <div className="bg-gray-50 py-3 rounded-xl border border-gray-100 font-mono text-lg font-bold text-gray-700 select-none">
                   {patientToDelete.name}
                 </div>
-                
+
                 <input
                   type="text"
                   value={confirmName}
@@ -466,11 +472,10 @@ const Dashboard: React.FC<DashboardProps> = ({ patients, onEdit, onDelete }) => 
                 <button
                   onClick={handleConfirmDelete}
                   disabled={confirmName !== patientToDelete.name}
-                  className={`w-full py-4 rounded-2xl font-bold text-white shadow-lg transition-all transform active:scale-[0.98] ${
-                    confirmName === patientToDelete.name
-                      ? 'bg-red-600 hover:bg-red-700 shadow-red-200'
-                      : 'bg-gray-300 cursor-not-allowed shadow-none'
-                  }`}
+                  className={`w-full py-4 rounded-2xl font-bold text-white shadow-lg transition-all transform active:scale-[0.98] ${confirmName === patientToDelete.name
+                    ? 'bg-red-600 hover:bg-red-700 shadow-red-200'
+                    : 'bg-gray-300 cursor-not-allowed shadow-none'
+                    }`}
                 >
                   Excluir Permanentemente
                 </button>
