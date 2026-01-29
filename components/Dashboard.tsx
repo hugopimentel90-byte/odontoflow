@@ -49,9 +49,13 @@ const Dashboard: React.FC<DashboardProps> = ({ patients, onEdit, onDelete }) => 
 
     if (filterProcedures.length > 0) {
       if (procedureFilterMode === 'OR') {
-        result = result.filter(p => p.procedures.some(proc => filterProcedures.includes(proc)));
+        result = result.filter(p =>
+          p.procedures.some(proc => filterProcedures.includes(proc.trim()))
+        );
       } else {
-        result = result.filter(p => filterProcedures.every(fp => p.procedures.includes(fp)));
+        result = result.filter(p =>
+          filterProcedures.every(fp => p.procedures.map(proc => proc.trim()).includes(fp.trim()))
+        );
       }
     }
 
