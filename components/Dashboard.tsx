@@ -20,6 +20,7 @@ const Dashboard: React.FC<DashboardProps> = ({ patients, onEdit, onDelete }) => 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterClass, setFilterClass] = useState<Classification | ''>('');
   const [filterProcedures, setFilterProcedures] = useState<string[]>([]);
+  const [procedureFilterMode, setProcedureFilterMode] = useState<'OR' | 'AND'>('OR');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [showFilters, setShowFilters] = useState(false);
@@ -47,7 +48,11 @@ const Dashboard: React.FC<DashboardProps> = ({ patients, onEdit, onDelete }) => 
     }
 
     if (filterProcedures.length > 0) {
-      result = result.filter(p => p.procedures.some(proc => filterProcedures.includes(proc)));
+      if (procedureFilterMode === 'OR') {
+        result = result.filter(p => p.procedures.some(proc => filterProcedures.includes(proc)));
+      } else {
+        result = result.filter(p => filterProcedures.every(fp => p.procedures.includes(fp)));
+      }
     }
 
     if (startDate) {
@@ -63,7 +68,7 @@ const Dashboard: React.FC<DashboardProps> = ({ patients, onEdit, onDelete }) => 
     }
 
     return result;
-  }, [patients, searchTerm, filterClass, filterProcedures, startDate, endDate]);
+  }, [patients, searchTerm, filterClass, filterProcedures, procedureFilterMode, startDate, endDate]);
 
   // Statistics
   const procedureCounts = useMemo(() => {
@@ -97,6 +102,7 @@ const Dashboard: React.FC<DashboardProps> = ({ patients, onEdit, onDelete }) => 
     setSearchTerm('');
     setFilterClass('');
     setFilterProcedures([]);
+    setProcedureFilterMode('OR');
     setStartDate('');
     setEndDate('');
   };
@@ -169,7 +175,23 @@ const Dashboard: React.FC<DashboardProps> = ({ patients, onEdit, onDelete }) => 
             </div>
           </div>
           <div>
-            <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Procedimentos</label>
+            <div className="flex justify-between items-center mb-2">
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Procedimentos</label>
+              <div className="flex bg-gray-100 rounded-lg p-0.5">
+                <button
+                  onClick={() => setProcedureFilterMode('OR')}
+                  className={`px-2 py-0.5 text-[10px] font-bold rounded-md transition-all ${procedureFilterMode === 'OR' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-400'}`}
+                >
+                  OU
+                </button>
+                <button
+                  onClick={() => setProcedureFilterMode('AND')}
+                  className={`px-2 py-0.5 text-[10px] font-bold rounded-md transition-all ${procedureFilterMode === 'AND' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-400'}`}
+                >
+                  E
+                </button>
+              </div>
+            </div>
             <div className="flex flex-wrap gap-2 p-2 bg-gray-50 border border-gray-200 rounded-xl max-h-[120px] overflow-y-auto">
               {PROCEDURES.map(p => (
                 <button
